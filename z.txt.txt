@@ -1,0 +1,213 @@
+======client
+import React, { useState,useEffect} from 'react'
+import axios from "axios";
+
+
+function Demo() {
+    const[fname,setFname]=useState('');
+    const[email,setEmail]=useState('');
+    const[password,setPassword]=useState('');
+    const[phone,setPhone]=useState('');
+    const[data,setData]=useState([]);
+
+    const adddata=async()=>{
+        let insertData=axios.post('http://localhost:5500/api/insert',{
+            fname,
+            email,  
+            password,
+            phone
+        });
+        if(insertData){
+            alert('student added')
+       
+        }
+    }
+    useEffect(()=>{
+      getdata()
+    },[])
+    const getdata=async()=>{
+      try {
+        const result=await axios.get('http://localhost:5500/api/disp')
+        setData(result.data)
+      } catch (error) {
+        console.log(error)
+        
+      }
+    }
+const records=data.map((d)=>{
+  return(
+    <tr>
+       <td>{d.fname}</td>
+        <td>{d.email}</td>
+        <td>{d.phone}</td>
+        <td>Edit</td>
+        <td><button type="button" onClick={(e)=>deletedata(d._id)}>Delete</button></td>
+    </tr>
+  )
+})
+const deletedata=async(id)=>{
+  alert(id)
+  const deldata=await axios.delete(`http://localhost:5500/api/delete/${id}`)
+  if(deldata){
+    alert('deleted')
+    getdata()
+    window.location.href='Display'
+  }
+}
+  return (
+    <div>
+       Name : <input type="text" name="fname" value={fname} onChange={(e)=>setFname(e.target.value)}/><br/><br/>
+       Email : <input type="text" name="email" value={email} onChange={(e)=>setEmail(e.target.value)}/><br/><br/>
+       Password : <input typr="text" name="password" value={password} onChange={(e)=>setPassword(e.target.value)}/><br/><br/>
+       Phone : <input typr="text" name="phone" value={phone} onChange={(e)=>setPhone(e.target.value)}/><br/><br/>
+
+       <button onClick={adddata}>Submit</button>
+
+       <br/>
+       <br/>
+       <br/>
+       <table className='table table-stripped'>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
+                </tr>
+                {records}
+            </table>
+
+    </div>
+  )
+}
+
+
+export default Demo
+
+=====route
+
+const express=require('express')
+const router=express.Router()
+const signupinfo=require('../models/student_model')
+
+//insert data
+router.post('/signup',async(req,res)=>{
+    const signupentry=new signupinfo({
+        name:req.body.name,
+        email:req.body.email,
+        phone:req.body.phone,
+        username:req.body.username,
+        password:req.body.password,
+    })
+    signupentry.save()
+})
+
+//display all record
+router.get('/dispStudent',async(req,res)=>{
+    const data= await signupinfo.find()
+    res.json(data)
+})
+
+
+//get data  by id
+router.get('/getOneStudent/:id',async(req,res)=>{
+    const data=await signupinfo.findById(req.params.id)
+    res.json(data)
+})
+//update your data
+router.patch('/update/:id',async(req,res)=>{
+        console.log(req.body)
+        const id=req.params.id
+        const updateData=req.body
+        const options={new:true}
+        const result=await signupinfo.findByIdAndUpdate(id,updateData,options)
+        res.send(result)
+    
+})
+
+
+//delete data
+router.delete('/delete/:id',async(req,res)=>{
+    try{
+        const id=req.params.id
+        const data=await signupinfo.findByIdAndDelete(id)
+        res.send('Student data has bees deleted')
+    }
+    catch(e){
+        res.json({message:e.message})
+    }
+})
+
+//search record
+router.get('/search/:key',async(req,res)=>{
+    let result=await signupinfo.find({
+        "$or":[
+            {name:{$regex: req.params.key}},
+            {phone:{$regex: req.params.key}},
+        ]
+    })
+    res.send(result)
+})
+
+module.exports=router
+
+=====update
+import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useParams } from 'react-router-dom'
+import axios from 'axios'
+import React,{useState} from 'react'
+
+const UpdateStudent = () => {
+    let navigate= useNavigate()
+  const [name,setName]=useState('');
+  const [email,setEmail]=useState('');
+  const [phone,setPhone]=useState('');
+  const [username,setUsername]=useState('');
+  const [password,setPassword]=useState('');
+  const param=useParams()
+  const handleName=(e)=>{
+    setName(e.target.value);
+   }
+  const dispData=async()=>{
+    alert(param.id) 
+    let result=await axios.get(`http://localhost:5000/student/getOnestudent/${param.id}`)
+    setName(result.data.name)
+ 
+  }
+  useEffect(()=>{
+    dispData()
+  },[])
+  const collectData=async()=>{
+    alert(param.id)
+     let result=await  axios.patch(`http://localhost:5000/student/update/${param.id}`,{
+        name,
+        email,
+        phone,
+        username,
+        password
+     })
+     if(result){
+        navigate('/')
+        navigate(0)
+     }
+
+  }
+    return (
+        <div className='App'>
+        <header className='App-header'>
+            <h3>Update Student </h3>
+            <label>
+                Name:
+            </label><br/>
+            <input type="text" name='name' value={name} required onChange={(e)=>handleName(e)} /><br/>
+    
+            <input type="password" name='password' value={password} required onChange={(e)=>handlePassword(e)}/><br/>
+            <button type='button' onClick={collectData}>update</button>
+        </header>
+      
+    </div>
+    )
+}
+
+export default UpdateStudent
